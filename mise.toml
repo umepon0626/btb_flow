@@ -1,2 +1,6 @@
 [tools]
 node = "22"
+
+[tasks.pre-commit]
+description = "Run pre-commit checks: lint-staged + type-check"
+run = "cd bkb_flow && npx lint-staged && npm run type-check"

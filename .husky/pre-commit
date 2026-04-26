@@ -1,0 +1,3 @@
+cd bkb_flow
+npx lint-staged
+npm run type-check

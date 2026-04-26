@@ -1,6 +1,5 @@
 import './App.css';
 import { VideoUploader } from './components/VideoUploader';
-import { SkeletonOverlay } from './components/SkeletonOverlay';
 import { WristVelocityChart } from './components/WristVelocityChart';
 import { useAnalysisStore } from './store/analysisStore';
 
@@ -15,13 +14,8 @@ function App() {
       <main className="app-main">
         <VideoUploader />
         {status !== 'idle' && (
-          <div className="analysis-panel">
-            <div className="video-canvas-wrapper">
-              <SkeletonOverlay />
-            </div>
-            <div className="chart-panel">
-              <WristVelocityChart />
-            </div>
+          <div className="chart-panel">
+            <WristVelocityChart />
           </div>
         )}
       </main>

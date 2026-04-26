@@ -55,7 +55,7 @@ export function SkeletonOverlay() {
     };
   }, [videoElement]);
 
-  const landmarks = frames[currentFrameIndex];
+  const landmarks = frames[currentFrameIndex]?.landmarks;
   if (!landmarks || landmarks.length === 0 || !size.width || !size.height) return null;
   if (!videoElement) return null;
 

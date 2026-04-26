@@ -19,7 +19,7 @@ export function WristVelocityChart() {
 
   const { chartData, stallFrames } = useMemo(() => {
     if (frames.length < 2) return { chartData: [], stallFrames: [] };
-    const vy = calcWristVy(frames);
+    const vy = calcWristVy(frames.map((f) => f.landmarks));
     const stall = detectTwoMotion(vy);
     const data = vy.map((v, i) => ({ frame: i, vy: v }));
     return { chartData: data, stallFrames: stall };

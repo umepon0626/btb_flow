@@ -134,7 +134,7 @@ export function useFrameScanner(videoEl: HTMLVideoElement | null) {
         );
 
         if (selected) {
-          addFrame(selected.landmarks);
+          addFrame(selected.landmarks, metadata.mediaTime);
           setTrackedCentroid(selected.centroid);
           trackedCentroidRef.current = selected.centroid;
           framesLengthRef.current += 1;

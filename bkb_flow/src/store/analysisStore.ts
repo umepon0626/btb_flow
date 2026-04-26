@@ -7,10 +7,15 @@ export interface PoseLandmark {
   visibility: number;
 }
 
+export interface FrameData {
+  landmarks: PoseLandmark[];
+  time: number; // mediaTime in seconds
+}
+
 interface AnalysisState {
   videoUrl: string | null;
   videoElement: HTMLVideoElement | null;
-  frames: PoseLandmark[][];
+  frames: FrameData[];
   currentFrameIndex: number;
   status: 'idle' | 'analyzing' | 'done' | 'error';
   fps: number;
@@ -20,7 +25,7 @@ interface AnalysisState {
   trackedCentroid: { x: number; y: number } | null;
   setVideoUrl: (url: string | null) => void;
   setVideoElement: (el: HTMLVideoElement | null) => void;
-  addFrame: (landmarks: PoseLandmark[]) => void;
+  addFrame: (landmarks: PoseLandmark[], time: number) => void;
   setCurrentFrameIndex: (index: number) => void;
   setStatus: (status: AnalysisState['status']) => void;
   setReferenceImageUrl: (url: string | null) => void;
@@ -43,7 +48,8 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   trackedCentroid: null,
   setVideoUrl: (url) => set({ videoUrl: url }),
   setVideoElement: (el) => set({ videoElement: el }),
-  addFrame: (landmarks) => set((state) => ({ frames: [...state.frames, landmarks] })),
+  addFrame: (landmarks, time) =>
+    set((state) => ({ frames: [...state.frames, { landmarks, time }] })),
   setCurrentFrameIndex: (index) => set({ currentFrameIndex: index }),
   setStatus: (status) => set({ status }),
   setReferenceImageUrl: (url) => set({ referenceImageUrl: url }),

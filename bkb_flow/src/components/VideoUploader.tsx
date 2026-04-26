@@ -91,19 +91,28 @@ export function VideoUploader() {
 
   const handleTimeUpdate = useCallback(() => {
     const el = videoRef.current;
-    if (!el || !frames.length || !el.duration) return;
-    const index = Math.round((el.currentTime / el.duration) * frames.length);
-    setCurrentFrameIndex(Math.max(0, Math.min(index, frames.length - 1)));
-  }, [frames.length, setCurrentFrameIndex]);
+    if (!el || !frames.length) return;
+    const t = el.currentTime;
+    // binary search for closest frame
+    let lo = 0,
+      hi = frames.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (frames[mid].time < t) lo = mid + 1;
+      else hi = mid;
+    }
+    setCurrentFrameIndex(lo);
+  }, [frames, setCurrentFrameIndex]);
 
   const seekToFrame = useCallback(
     (index: number) => {
       const el = videoRef.current;
       if (!el || !frames.length) return;
-      el.currentTime = (index / frames.length) * el.duration;
+      const frameTime = frames[index].time;
+      el.currentTime = frameTime;
       setCurrentFrameIndex(index);
     },
-    [frames.length, setCurrentFrameIndex]
+    [frames, setCurrentFrameIndex]
   );
 
   return (

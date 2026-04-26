@@ -93,7 +93,7 @@ function calcAngle3D(a: PoseLandmark, b: PoseLandmark, c: PoseLandmark): number 
   const mag2 = Math.sqrt(v2.x ** 2 + v2.y ** 2 + v2.z ** 2);
   if (mag1 === 0 || mag2 === 0) return 0;
   const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
-  return (Math.acos(cosAngle) * 180) / Math.PI;
+  return 180 - (Math.acos(cosAngle) * 180) / Math.PI;
 }
 
 export function calcWristRelPos(frames: PoseLandmark[][]): { x: number[]; y: number[] } {

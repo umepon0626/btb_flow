@@ -42,18 +42,29 @@ function applyEMA(values: number[], alpha: number): number[] {
   return result;
 }
 
-export function calcWristVy(frames: PoseLandmark[][]): number[] {
+export function calcWristVelocityXYZ(frames: PoseLandmark[][]): { x: number[]; y: number[]; z: number[] } {
+  const vx: number[] = [];
   const vy: number[] = [];
+  const vz: number[] = [];
   for (let i = 0; i < frames.length - 1; i++) {
     const curr = frames[i][LANDMARK_INDICES.RIGHT_WRIST];
     const next = frames[i + 1][LANDMARK_INDICES.RIGHT_WRIST];
     if (curr && next) {
+      vx.push(next.x - curr.x);
       vy.push(next.y - curr.y);
+      vz.push(next.z - curr.z);
     } else {
+      vx.push(0);
       vy.push(0);
+      vz.push(0);
     }
   }
-  return applyEMA(vy, 0.5);
+  return { x: applyEMA(vx, 0.5), y: applyEMA(vy, 0.5), z: applyEMA(vz, 0.5) };
+}
+
+// ツーモーション検出用: y成分のみ返すラッパー
+export function calcWristVy(frames: PoseLandmark[][]): number[] {
+  return calcWristVelocityXYZ(frames).y;
 }
 
 export function detectTwoMotion(vy: number[]): number[] {
@@ -96,9 +107,10 @@ function calcAngle3D(a: PoseLandmark, b: PoseLandmark, c: PoseLandmark): number 
   return 180 - (Math.acos(cosAngle) * 180) / Math.PI;
 }
 
-export function calcWristRelPos(frames: PoseLandmark[][]): { x: number[]; y: number[] } {
+export function calcWristRelPos(frames: PoseLandmark[][]): { x: number[]; y: number[]; z: number[] } {
   const xs: number[] = [];
   const ys: number[] = [];
+  const zs: number[] = [];
   for (const lms of frames) {
     const wrist = lms[LANDMARK_INDICES.RIGHT_WRIST];
     const lHip = lms[LANDMARK_INDICES.LEFT_HIP];
@@ -106,14 +118,17 @@ export function calcWristRelPos(frames: PoseLandmark[][]): { x: number[]; y: num
     if (wrist && lHip && rHip) {
       const hipCx = (lHip.x + rHip.x) / 2;
       const hipCy = (lHip.y + rHip.y) / 2;
+      const hipCz = (lHip.z + rHip.z) / 2;
       xs.push(wrist.x - hipCx);
       ys.push(wrist.y - hipCy);
+      zs.push(wrist.z - hipCz);
     } else {
       xs.push(0);
       ys.push(0);
+      zs.push(0);
     }
   }
-  return { x: applyEMA(xs, 0.5), y: applyEMA(ys, 0.5) };
+  return { x: applyEMA(xs, 0.5), y: applyEMA(ys, 0.5), z: applyEMA(zs, 0.5) };
 }
 
 export function calcHipTiltAngle(frames: PoseLandmark[][]): number[] {

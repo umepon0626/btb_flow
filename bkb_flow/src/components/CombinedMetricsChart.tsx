@@ -5,13 +5,17 @@ import {
 } from 'recharts';
 
 const METRIC_DEFS = [
-  { key: 'vy',        label: '手首速度 Vy',   color: '#00c853', unit: '' },
-  { key: 'elbow',     label: '右肘角度',        color: '#2196F3', unit: '°' },
-  { key: 'knee',      label: '右膝角度',        color: '#FF9800', unit: '°' },
-  { key: 'hip',       label: '腰前屈角',        color: '#E91E63', unit: '°' },
-  { key: 'armYaw',    label: '右腕ヨー角',      color: '#9C27B0', unit: '°' },
-  { key: 'release',   label: 'リリース角度',    color: '#00BCD4', unit: '°' },
-  { key: 'wristRelY', label: '手首相対位置 Y',  color: '#FF5722', unit: '' },
+  { key: 'wristVx',   label: '手首速度 Vx',      color: '#00c853', unit: '' },
+  { key: 'wristVy',   label: '手首速度 Vy',      color: '#69f0ae', unit: '' },
+  { key: 'wristVz',   label: '手首速度 Vz',      color: '#b9f6ca', unit: '' },
+  { key: 'elbow',     label: '右肘角度',           color: '#2196F3', unit: '°' },
+  { key: 'knee',      label: '右膝角度',           color: '#FF9800', unit: '°' },
+  { key: 'hip',       label: '腰前屈角',           color: '#E91E63', unit: '°' },
+  { key: 'armYaw',    label: '右腕ヨー角',         color: '#9C27B0', unit: '°' },
+  { key: 'release',   label: 'リリース角度',       color: '#00BCD4', unit: '°' },
+  { key: 'wristRelX', label: '手首相対位置 X',    color: '#FF5722', unit: '' },
+  { key: 'wristRelY', label: '手首相対位置 Y',    color: '#FF8A65', unit: '' },
+  { key: 'wristRelZ', label: '手首相対位置 Z',    color: '#FFCCBC', unit: '' },
 ] as const;
 
 type MetricKey = (typeof METRIC_DEFS)[number]['key'];

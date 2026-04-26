@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { useAnalysisStore } from '../store/analysisStore';
 import {
-  calcWristVy,
+  calcWristVelocityXYZ,
   calcElbowAngle,
   calcKneeAngle,
   calcHipTiltAngle,
   calcArmYawAngle,
   calcReleaseAngle,
   calcWristRelPos,
+  calcWristVy,
   detectTwoMotion,
 } from '../lib/analysis';
 import { CombinedMetricsChart } from './CombinedMetricsChart';
@@ -39,17 +40,22 @@ export function MetricsPanel() {
       stallRanges.push({ start: rangeStart, end: prev });
     }
 
+    const wristVelocity = calcWristVelocityXYZ(landmarkFrames);
     const wristRelPos = calcWristRelPos(landmarkFrames);
 
     return {
       rawData: {
-        vy,
+        wristVx: wristVelocity.x,
+        wristVy: wristVelocity.y,
+        wristVz: wristVelocity.z,
         elbow: calcElbowAngle(landmarkFrames),
         knee: calcKneeAngle(landmarkFrames),
         hip: calcHipTiltAngle(landmarkFrames),
         armYaw: calcArmYawAngle(landmarkFrames),
         release: calcReleaseAngle(landmarkFrames),
+        wristRelX: wristRelPos.x,
         wristRelY: wristRelPos.y,
+        wristRelZ: wristRelPos.z,
       },
       stallRanges,
       hasTwoMotion: stallFrames.length > 0,

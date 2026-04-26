@@ -6,6 +6,8 @@ import type { PoseLandmark } from '../store/analysisStore';
 
 type FrameCallback = (now: DOMHighResTimeStamp, metadata: VideoFrameCallbackMetadata) => void;
 
+const EMA_ALPHA = 0.5;
+
 function calcCentroid(landmarks: PoseLandmark[]): { x: number; y: number } {
   const sum = landmarks.reduce((acc, lm) => ({ x: acc.x + lm.x, y: acc.y + lm.y }), { x: 0, y: 0 });
   return { x: sum.x / landmarks.length, y: sum.y / landmarks.length };
@@ -15,32 +17,14 @@ function dist(a: { x: number; y: number }, b: { x: number; y: number }): number 
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-function selectPerson(
-  allPoses: PoseLandmark[][],
-  trackedCentroid: { x: number; y: number } | null,
-  selectedIndex: number | null
-): { landmarks: PoseLandmark[]; centroid: { x: number; y: number } } | null {
-  if (allPoses.length === 0) return null;
-
-  if (trackedCentroid === null) {
-    const idx = selectedIndex !== null && selectedIndex < allPoses.length ? selectedIndex : 0;
-    const lm = allPoses[idx];
-    return { landmarks: lm, centroid: calcCentroid(lm) };
-  }
-
-  let best = -1;
-  let bestDist = Infinity;
-  for (let i = 0; i < allPoses.length; i++) {
-    const c = calcCentroid(allPoses[i]);
-    const d = dist(c, trackedCentroid);
-    if (d < bestDist) {
-      bestDist = d;
-      best = i;
-    }
-  }
-  if (best === -1) return null;
-  const lm = allPoses[best];
-  return { landmarks: lm, centroid: calcCentroid(lm) };
+function smoothLandmarks(current: PoseLandmark[], prev: PoseLandmark[] | null): PoseLandmark[] {
+  if (!prev) return current;
+  return current.map((lm, i) => ({
+    x: prev[i] ? prev[i].x * (1 - EMA_ALPHA) + lm.x * EMA_ALPHA : lm.x,
+    y: prev[i] ? prev[i].y * (1 - EMA_ALPHA) + lm.y * EMA_ALPHA : lm.y,
+    z: prev[i] ? prev[i].z * (1 - EMA_ALPHA) + lm.z * EMA_ALPHA : lm.z,
+    visibility: lm.visibility,
+  }));
 }
 
 export function useFrameScanner(videoEl: HTMLVideoElement | null) {
@@ -48,8 +32,10 @@ export function useFrameScanner(videoEl: HTMLVideoElement | null) {
   const isScanningRef = useRef(false);
   const frameHandleRef = useRef<number>(0);
   const framesLengthRef = useRef(0);
-  // 人物選択待ちで一時停止中のコールバックを保存
   const pendingCallbackRef = useRef<FrameCallback | null>(null);
+  const smoothedLandmarksRef = useRef<PoseLandmark[] | null>(null);
+  const prevCentroidRef = useRef<{ x: number; y: number } | null>(null);
+  const centroidVelocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const addFrame = useAnalysisStore((s) => s.addFrame);
   const setStatus = useAnalysisStore((s) => s.setStatus);
@@ -95,6 +81,9 @@ export function useFrameScanner(videoEl: HTMLVideoElement | null) {
     framesLengthRef.current = 0;
     isScanningRef.current = true;
     pendingCallbackRef.current = null;
+    smoothedLandmarksRef.current = null;
+    prevCentroidRef.current = null;
+    centroidVelocityRef.current = { x: 0, y: 0 };
     setStatus('analyzing');
     setTrackedCentroid(null);
     trackedCentroidRef.current = null;
@@ -115,7 +104,6 @@ export function useFrameScanner(videoEl: HTMLVideoElement | null) {
           }))
         );
 
-        // 最初のフレームで複数人検出 → 人物選択のため一時停止
         if (
           framesLengthRef.current === 0 &&
           allPoses.length > 1 &&
@@ -124,17 +112,60 @@ export function useFrameScanner(videoEl: HTMLVideoElement | null) {
           setCandidatePoses(allPoses);
           pendingCallbackRef.current = frameCallback;
           videoEl.pause();
-          return; // resumeScanning() 呼び出しまで待機
+          return;
         }
 
-        const selected = selectPerson(
-          allPoses,
-          trackedCentroidRef.current,
-          selectedPersonIndexRef.current
-        );
+        // Velocity-based tracking
+        const trackedCentroid = trackedCentroidRef.current;
+        let selected: { landmarks: PoseLandmark[]; centroid: { x: number; y: number } } | null =
+          null;
+
+        if (allPoses.length === 0) {
+          selected = null;
+        } else if (trackedCentroid === null) {
+          const idx =
+            selectedPersonIndexRef.current !== null &&
+            selectedPersonIndexRef.current < allPoses.length
+              ? selectedPersonIndexRef.current
+              : 0;
+          const lm = allPoses[idx];
+          selected = { landmarks: lm, centroid: calcCentroid(lm) };
+        } else {
+          // Predict position using velocity
+          const predicted = {
+            x: trackedCentroid.x + centroidVelocityRef.current.x,
+            y: trackedCentroid.y + centroidVelocityRef.current.y,
+          };
+          let best = -1;
+          let bestDist = Infinity;
+          for (let i = 0; i < allPoses.length; i++) {
+            const c = calcCentroid(allPoses[i]);
+            const d = dist(c, predicted);
+            if (d < bestDist) {
+              bestDist = d;
+              best = i;
+            }
+          }
+          if (best !== -1) {
+            const lm = allPoses[best];
+            selected = { landmarks: lm, centroid: calcCentroid(lm) };
+          }
+        }
 
         if (selected) {
-          addFrame(selected.landmarks, metadata.mediaTime);
+          const smoothed = smoothLandmarks(selected.landmarks, smoothedLandmarksRef.current);
+          smoothedLandmarksRef.current = smoothed;
+
+          // Update velocity
+          if (prevCentroidRef.current) {
+            centroidVelocityRef.current = {
+              x: selected.centroid.x - prevCentroidRef.current.x,
+              y: selected.centroid.y - prevCentroidRef.current.y,
+            };
+          }
+          prevCentroidRef.current = selected.centroid;
+
+          addFrame(smoothed, metadata.mediaTime);
           setTrackedCentroid(selected.centroid);
           trackedCentroidRef.current = selected.centroid;
           framesLengthRef.current += 1;
@@ -153,7 +184,6 @@ export function useFrameScanner(videoEl: HTMLVideoElement | null) {
     frameHandleRef.current = videoEl.requestVideoFrameCallback(frameCallback);
   }, [videoEl, addFrame, setStatus, setCurrentFrameIndex, setTrackedCentroid, setCandidatePoses]);
 
-  // 人物選択後に解析を再開
   const resumeScanning = useCallback(() => {
     if (!videoEl || !pendingCallbackRef.current || !isScanningRef.current) return;
     const cb = pendingCallbackRef.current;

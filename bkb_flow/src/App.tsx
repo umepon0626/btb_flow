@@ -1,6 +1,6 @@
 import './App.css';
 import { VideoUploader } from './components/VideoUploader';
-import { WristVelocityChart } from './components/WristVelocityChart';
+import { MetricsPanel } from './components/MetricsPanel';
 import { useAnalysisStore } from './store/analysisStore';
 
 function App() {
@@ -15,7 +15,7 @@ function App() {
         <VideoUploader />
         {status !== 'idle' && (
           <div className="chart-panel">
-            <WristVelocityChart />
+            <MetricsPanel />
           </div>
         )}
       </main>
